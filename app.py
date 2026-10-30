@@ -1,180 +1,96 @@
-import os
-import pickle
 from flask import Flask, render_template_string, request
 import numpy as np
-import pandas as pd
+import pickle
 
 app = Flask(__name__)
 
 # Load the trained Gradient Boosting model
-model_path = "gradient.pkl"
-with open(model_path, "rb") as f:
-  model = pickle.load(f)
+with open('gradient.pkl', 'rb') as f:
+    model = pickle.load(f)
 
-# Modern and attractive inline HTML/CSS layout
+# Modern and attractive HTML template styled with Tailwind CSS
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gradient Boosting Model Predictor</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --primary: #4f46e5;
-            --primary-hover: #4338ca;
-            --bg-color: #f1f5f9;
-            --card-bg: #ffffff;
-            --text-main: #1e293b;
-            --text-muted: #64748b;
-            --border: #cbd5e1;
-        }
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Inter', sans-serif;
-        }
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            padding: 20px;
-        }
-        .container {
-            background: var(--card-bg);
-            width: 100%;
-            max-width: 620px;
-            padding: 40px;
-            border-radius: 16px;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
-        }
-        h2 {
-            font-weight: 700;
-            font-size: 26px;
-            margin-bottom: 6px;
-            color: var(--text-main);
-            text-align: center;
-        }
-        .subtitle {
-            text-align: center;
-            color: var(--text-muted);
-            font-size: 14px;
-            margin-bottom: 30px;
-        }
-        .form-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-        .form-group {
-            display: flex;
-            flex-direction: column;
-        }
-        .form-group.full-width {
-            grid-column: span 2;
-        }
-        label {
-            font-size: 13px;
-            font-weight: 600;
-            margin-bottom: 6px;
-            color: var(--text-main);
-        }
-        input, select {
-            padding: 11px 14px;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            font-size: 14px;
-            outline: none;
-            transition: border-color 0.2s, box-shadow 0.2s;
-            background-color: #fff;
-        }
-        input:focus, select:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
-        }
-        button {
-            width: 100%;
-            padding: 13px;
-            background-color: var(--primary);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            margin-top: 24px;
-        }
-        button:hover {
-            background-color: var(--primary-hover);
-        }
-        .result-card {
-            margin-top: 24px;
-            padding: 18px;
-            background-color: #e0e7ff;
-            border: 1px solid #c7d2fe;
-            border-radius: 8px;
-            text-align: center;
-            color: #312e81;
-            font-weight: 600;
-            font-size: 18px;
-        }
-    </style>
+    <title>Medical Insurance Cost Predictor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <div class="container">
-        <h2>Gradient Boosting Predictor</h2>
-        <p class="subtitle">Provide feature inputs below to obtain model predictions</p>
-        
-        <form method="POST">
-            <div class="form-grid">
-                <div class="form-group">
-                    <label for="Department">Department</label>
-                    <input type="text" id="Department" name="Department" required placeholder="e.g., IT, HR">
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen flex items-center justify-center p-4">
+    <div class="max-w-xl w-full bg-white rounded-2xl shadow-xl overflow-hidden p-8">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-extrabold text-indigo-900">Insurance Cost Predictor</h1>
+            <p class="text-gray-500 text-sm mt-2">Enter your details below to estimate your medical insurance charges.</p>
+        </div>
+
+        <form method="POST" class="space-y-5">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Age -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Age</label>
+                    <input type="number" name="age" required min="1" max="120" value="{{ request.form.get('age', 25) }}"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
                 </div>
-                
-                <div class="form-group">
-                    <label for="Experience_Years">Experience (Years)</label>
-                    <input type="number" step="any" id="Experience_Years" name="Experience_Years" required placeholder="e.g., 3.5">
-                </div>
-                
-                <div class="form-group">
-                    <label for="Education_Level">Education Level</label>
-                    <input type="text" id="Education_Level" name="Education_Level" required placeholder="e.g., Bachelor's">
-                </div>
-                
-                <div class="form-group">
-                    <label for="Age">Age</label>
-                    <input type="number" id="Age" name="Age" required placeholder="e.g., 29">
-                </div>
-                
-                <div class="form-group">
-                    <label for="Gender">Gender</label>
-                    <select id="Gender" name="Gender" required>
-                        <option value="" disabled selected>Select Gender</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Other">Other</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label for="City">City</label>
-                    <input type="text" id="City" name="City" required placeholder="e.g., New York">
+
+                <!-- BMI -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">BMI</label>
+                    <input type="number" step="0.1" name="bmi" required min="10" max="60" value="{{ request.form.get('bmi', 22.5) }}"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
                 </div>
             </div>
-            
-            <button type="submit">Run Prediction</button>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Children -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Children / Dependents</label>
+                    <input type="number" name="children" required min="0" max="10" value="{{ request.form.get('children', 0) }}"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+                </div>
+
+                <!-- Sex -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Sex</label>
+                    <select name="sex" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+                        <option value="1" {% if request.form.get('sex') == '1' %}selected{% endif %}>Male</option>
+                        <option value="0" {% if request.form.get('sex') == '0' %}selected{% endif %}>Female</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Smoker -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Smoker</label>
+                    <select name="smoker" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+                        <option value="1" {% if request.form.get('smoker') == '1' %}selected{% endif %}>Yes</option>
+                        <option value="0" {% if request.form.get('smoker') == '0' %}selected{% endif %}>No</option>
+                    </select>
+                </div>
+
+                <!-- Region -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Region</label>
+                    <select name="region" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+                        <option value="0" {% if request.form.get('region') == '0' %}selected{% endif %}>Northeast</option>
+                        <option value="1" {% if request.form.get('region') == '1' %}selected{% endif %}>Northwest</option>
+                        <option value="2" {% if request.form.get('region') == '2' %}selected{% endif %}>Southeast</option>
+                        <option value="3" {% if request.form.get('region') == '3' %}selected{% endif %}>Southwest</option>
+                    </select>
+                </div>
+            </div>
+
+            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg shadow-md transition duration-200">
+                Predict Charges
+            </button>
         </form>
 
         {% if prediction is not none %}
-        <div class="result-card">
-            Predicted Value: {{ prediction }}
+        <div class="mt-8 p-4 bg-indigo-50 border border-indigo-200 rounded-xl text-center animate-pulse">
+            <h2 class="text-sm font-semibold text-indigo-600 uppercase tracking-wider">Estimated Insurance Cost</h2>
+            <p class="text-3xl font-bold text-indigo-900 mt-1">${{ "%.2f"|format(prediction) }}</p>
         </div>
         {% endif %}
     </div>
@@ -182,46 +98,26 @@ HTML_TEMPLATE = """
 </html>
 """
 
-
-@app.route("/", methods=["GET", "POST"])
+@app.route('/', methods=['GET', 'POST'])
 def home():
-  prediction = None
-  if request.method == "POST":
-    try:
-      # Extract form inputs matching model features
-      department = request.form["Department"]
-      experience_years = float(request.form["Experience_Years"])
-      education_level = request.form["Education_Level"]
-      age = float(request.form["Age"])
-      gender = request.form["Gender"]
-      city = request.form["City"]
+    prediction = None
+    if request.method == 'POST':
+        try:
+            # Extract inputs in the order required by the model: age, sex, bmi, children, smoker, region
+            age = float(request.form['age'])
+            sex = float(request.form['sex'])
+            bmi = float(request.form['bmi'])
+            children = float(request.form['children'])
+            smoker = float(request.form['smoker'])
+            region = float(request.form['region'])
 
-      # Construct DataFrame matching expected feature names and order
-      input_data = pd.DataFrame([[
-          department,
-          experience_years,
-          education_level,
-          age,
-          gender,
-          city,
-      ]],
-                                columns=[
-                                    "Department",
-                                    "Experience_Years",
-                                    "Education_Level",
-                                    "Age",
-                                    "Gender",
-                                    "City",
-                                ])
+            features = np.array([[age, sex, bmi, children, smoker, region]])
+            prediction = model.predict(features)[0]
+        except Exception as e:
+            print("Error during prediction:", e)
+            prediction = None
 
-      # Predict using the loaded model
-      pred = model.predict(input_data)
-      prediction = round(float(pred[0]), 4)
-    except Exception as e:
-      prediction = f"Error: {str(e)}"
+    return render_template_string(HTML_TEMPLATE, prediction=prediction)
 
-  return render_template_string(HTML_TEMPLATE, prediction=prediction)
-
-
-if __name__ == "__main__":
-  app.run(host="0.0.0.0", port=5000)
+if __name__ == '__main__':
+    app.run(debug=True)
